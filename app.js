@@ -1,6 +1,8 @@
 import express from 'express';
 import errorMiddleware from "./middlewares/error.middleware.js";
 import healthRoutes from "./routes/health.route.js";
+import tenantRoutes from "./routes/tenant.route.js";
+import agentRoutes from "./routes/agent.route.js";
 
 const app = express();
 
@@ -9,6 +11,8 @@ app.use(express.json());
 
 // Routes
 app.use("/api", healthRoutes);
+app.use("/api/tenant", tenantRoutes);
+app.use("/api/agent", agentRoutes);
 
 // Root Route
 app.get("/", (req, res) => {
