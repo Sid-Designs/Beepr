@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
+const { Schema } = mongoose;
 
 import { Agents, getAgentConfig } from "../config/agents.js";
 
-const { Schema } = mongoose;
 
 const faqSchema = new Schema(
     {

@@ -69,7 +69,7 @@ const getAgentsByTenant = async (tenantId) => {
 
 const getAgentById = async (tenantId, agentId) => {
   if (!tenantId || !agentId) {
-    throw new Error("agentId and tenantId are required");
+    throw new Error("tenantId and agentId are required");
   }
 
   if (!mongoose.isValidObjectId(tenantId)) {
@@ -83,10 +83,18 @@ const getAgentById = async (tenantId, agentId) => {
   const agent = await Agent.findOne({ _id: agentId, tenantId });
 
   if (!agent) {
+    const agentById = await Agent.findById(agentId).select("tenantId");
+
+    if (agentById) {
+      throw new Error("Agent does not belong to the specified tenant");
+    }
+
     throw new Error("Agent not found");
   }
 
   return agent;
 };
+
+export { createAgent, getAgentsByTenant, getAgentById };
 
 export default { createAgent, getAgentsByTenant, getAgentById };

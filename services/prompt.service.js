@@ -33,6 +33,21 @@ Industry: ${tenant.industry}.
 - Maintain conversational context
 `;
 
+  if (agentConfig.goals?.goal) {
+    prompt += `
+\nGoal:
+${agentConfig.goals.goal}
+`;
+  }
+
+  if (Array.isArray(agentConfig.goals?.tasks) && agentConfig.goals.tasks.length > 0) {
+    prompt += `\nKey Tasks:`;
+    agentConfig.goals.tasks.forEach((task) => {
+      prompt += `\n- ${task}`;
+    });
+    prompt += "\n";
+  }
+
   // --- SCRIPT ---
   if (script) {
     prompt += `
@@ -57,7 +72,7 @@ A${index + 1}: ${faq.answer}
   prompt += `
 \nRules:
 - Do NOT hallucinate
-- If unsure, say you will connect to a human agent
+- ${agentConfig.goals?.handoff || "If unsure, say you will connect to a human agent"}
 - Stay within the business context of ${tenant.orgName}
 `;
 
