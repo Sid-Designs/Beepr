@@ -20,7 +20,7 @@ const normalizeHistory = (history = []) => {
       role: message.role,
       content: cleanText(message.content),
     }))
-    .slice(-12);
+    .slice(-8);
 };
 
 const textIncludesAny = (text, patterns) => {
@@ -295,7 +295,9 @@ Politely say you can help with this business's services and ask what they need r
 
 RESPONSE FORMAT:
 Return only the assistant's spoken reply.
-Maximum 2 sentences.
+Maximum 2 short sentences.
+Prefer 12 to 24 words per sentence.
+Include one clear next-step question when appropriate.
 No bullet points.
 No markdown.
 `;
@@ -324,7 +326,7 @@ ${userQuery}
         model: "llama-3.3-70b-versatile",
         messages,
         temperature: 0.3,
-        max_tokens: 110,
+        max_tokens: 80,
       },
       {
         headers: {

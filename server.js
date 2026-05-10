@@ -1,8 +1,8 @@
-import dotenv from "dotenv";
+import "./config/env.js";
+import http from "node:http";
 import app from "./app.js";
 import connectDB from "./config/db.js";
-
-dotenv.config();
+import { registerAudioWs } from "./ws/audio.ws.js";
 
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || "development";
@@ -13,8 +13,11 @@ const startServer = async () => {
     // Connect Database
     const conn = await connectDB();
 
+    const server = http.createServer(app);
+    registerAudioWs(server);
+
     // Start Express Server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log("======================================");
       console.log(`🚀 Server running in ${NODE_ENV} mode`);
       console.log(`🗄️  MongoDB Connected Successfully`);

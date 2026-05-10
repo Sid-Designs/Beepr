@@ -22,6 +22,22 @@ const KnowledgeBaseSchema = new Schema(
       required: true,
     },
 
+    text: {
+      type: String,
+    },
+
+    docId: {
+      type: String,
+      index: true,
+    },
+
+    metadata: {
+      heading: String,
+      sourceType: String,
+      chunkIndex: Number,
+      sourceUrl: String,
+    },
+
     embedding: {
       type: [Number],
       required: true,
@@ -45,6 +61,7 @@ const KnowledgeBaseSchema = new Schema(
 );
 
 KnowledgeBaseSchema.index({ tenantId: 1, agentId: 1 });
+KnowledgeBaseSchema.index({ tenantId: 1, agentId: 1, docId: 1 });
 KnowledgeBaseSchema.index({ content: "text" });
 
 const KnowledgeBase = mongoose.model("KnowledgeBase", KnowledgeBaseSchema);

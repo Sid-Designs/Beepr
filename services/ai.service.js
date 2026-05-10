@@ -2,12 +2,16 @@ import axios from "axios";
 
 const AI_QUERY_URL = "http://localhost:5000/api/ai/query";
 
-export const queryAI = async ({ tenantId, agentId, query }) => {
+export const queryAI = async ({ tenantId, agentId, query, sessionId }) => {
   const payload = {
     tenantId,
     agentId,
     query,
   };
+
+  if (sessionId) {
+    payload.sessionId = sessionId;
+  }
 
   const response = await axios.post(AI_QUERY_URL, payload, {
     headers: {

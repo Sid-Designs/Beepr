@@ -1,14 +1,10 @@
-import KnowledgeBase from "../models/knowledgeBase.model.js";
-import { splitTextIntoChunks } from "../utils/chunk.util.js";
-import { generateEmbedding } from "../services/embedding.service.js";
-import { v4 as uuidv4 } from "uuid";
-
-import { extractTextFromPDF } from "../services/pdf.service.js";
 import fs from "fs";
-
-import { extractTextFromURL } from "../services/scraper.service.js";
-
-import { getRelevantContext } from "../services/retrieval.service.js";
+import {
+  ingestPdf,
+  ingestText,
+  ingestUrl,
+} from "../services/kb/ingest.service.js";
+import { retrieveContext } from "../services/kb/retrieval.service.js";
 
 export const addTextToKB = async (req, res) => {
   try {
@@ -22,43 +18,19 @@ export const addTextToKB = async (req, res) => {
       });
     }
 
-    // 2. Generate sourceId (grouping)
-    const sourceId = `text_${uuidv4()}`;
+    const result = await ingestText({ tenantId, agentId, text });
 
-    // 3. Chunk text
-    const chunks = splitTextIntoChunks(text);
-
-    if (chunks.length === 0) {
+    if (!result.inserted) {
       return res.status(400).json({
         success: false,
         message: "No valid content to process",
       });
     }
 
-    // 4. Process each chunk
-    const documents = [];
-
-    for (const chunk of chunks) {
-      const embedding = await generateEmbedding(chunk);
-
-      documents.push({
-        tenantId,
-        agentId,
-        content: chunk,
-        embedding,
-        sourceType: "text",
-        sourceId,
-      });
-    }
-
-    // 5. Insert into DB
-    await KnowledgeBase.insertMany(documents);
-
-    // 6. Response
     return res.status(200).json({
       success: true,
       message: "Text processed and stored successfully",
-      totalChunks: documents.length,
+      totalChunks: result.inserted,
     });
   } catch (error) {
     console.error("KB Text Error:", error.message);
@@ -81,45 +53,26 @@ export const addPDFToKB = async (req, res) => {
       });
     }
 
-    // 1. Extract text
-    const text = await extractTextFromPDF(req.file.path);
+    const result = await ingestPdf({
+      tenantId,
+      agentId,
+      filePath: req.file.path,
+      fileName: req.file.originalname,
+    });
 
-    // 2. Generate sourceId
-    const sourceId = `pdf_${Date.now()}`;
-
-    // 3. Chunk text
-    const chunks = splitTextIntoChunks(text);
-
-    const documents = [];
-
-    for (const chunk of chunks) {
-      const embedding = await generateEmbedding(chunk);
-
-      documents.push({
-        tenantId,
-        agentId,
-        content: chunk,
-        embedding,
-        sourceType: "pdf",
-        sourceId,
-      });
-    }
-
-    // 4. Save to DB
-    await KnowledgeBase.insertMany(documents);
-
-    // 5. Delete uploaded file (cleanup)
     fs.unlinkSync(req.file.path);
 
     return res.status(200).json({
       success: true,
       message: "PDF processed successfully",
-      totalChunks: documents.length,
+      totalChunks: result.inserted,
     });
   } catch (error) {
     console.error("PDF KB Error:", error.message);
 
-    fs.unlinkSync(req.file.path); // Delete uploaded file (cleanup)
+    if (req.file?.path) {
+      fs.unlinkSync(req.file.path);
+    }
 
     return res.status(500).json({
       success: false,
@@ -139,53 +92,29 @@ export const addURLToKB = async (req, res) => {
       });
     }
 
-    const allDocuments = [];
+    let totalChunks = 0;
 
     for (const url of urls) {
       try {
-        // 1. Scrape content
-        const text = await extractTextFromURL(url);
-
-        if (!text) continue;
-
-        // 2. Chunk
-        const chunks = splitTextIntoChunks(text);
-
-        const sourceId = `url_${Date.now()}`;
-
-        for (const chunk of chunks) {
-          const embedding = await generateEmbedding(chunk);
-
-          allDocuments.push({
-            tenantId,
-            agentId,
-            content: chunk,
-            embedding,
-            sourceType: "url",
-            sourceUrl: url,
-            sourceId,
-          });
-        }
+        const result = await ingestUrl({ tenantId, agentId, url });
+        totalChunks += result.inserted || 0;
       } catch (err) {
         console.error(`Error processing URL: ${url}`, err.message);
         continue; // skip failed URL
       }
     }
 
-    if (allDocuments.length === 0) {
+    if (!totalChunks) {
       return res.status(400).json({
         success: false,
         message: "No content could be extracted from URLs",
       });
     }
 
-    // Save all chunks
-    await KnowledgeBase.insertMany(allDocuments);
-
     return res.status(200).json({
       success: true,
       message: "URLs processed successfully",
-      totalChunks: allDocuments.length,
+      totalChunks,
     });
   } catch (error) {
     console.error("URL KB Error:", error.message);
@@ -210,12 +139,9 @@ export const queryKB = async (req, res) => {
     }
 
     // 2. Get relevant context
-    const context = await getRelevantContext(
-      query,
-      tenantId,
-      agentId,
-      3 // topK
-    );
+    const context = await retrieveContext(query, tenantId, agentId, {
+      topK: 5,
+    });
 
     return res.status(200).json({
       success: true,

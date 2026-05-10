@@ -18,6 +18,11 @@ export const generateLiveKitToken = async (roomName, participantName) => {
 
   const token = new AccessToken(apiKey, apiSecret, {
     identity: participantName,
+    ttl: "15m",
+    metadata: JSON.stringify({
+      role: "ai-worker",
+      generatedBy: "api/livekit/token",
+    }),
   });
 
   token.addGrant({
