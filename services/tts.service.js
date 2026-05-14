@@ -3,11 +3,34 @@ import fetch from "node-fetch";
 const API_KEY = process.env.SARVAM_API_KEY;
 const TTS_URL = "https://api.sarvam.ai/text-to-speech";
 
-export const generateSpeech = async (text) => {
+const resolveSpeechRate = (tone = "calm") => {
+  if (tone === "executive") return 1.01;
+  if (tone === "supportive" || tone === "educational") return 0.92;
+  if (tone === "enthusiastic") return 1.05;
+  if (tone === "urgent") return 1.08;
+  return 1.0;
+};
+
+const resolveLanguageConfig = (language = "en") => {
+  const key = String(language || "en").toLowerCase();
+  if (key === "hi" || key === "hindi") {
+    return { language: "hi-IN", voice: process.env.TTS_VOICE_HI || "anushka" };
+  }
+  if (key === "mr" || key === "marathi") {
+    return { language: "mr-IN", voice: process.env.TTS_VOICE_MR || "anushka" };
+  }
+  return { language: "en-IN", voice: process.env.TTS_VOICE_EN || "anushka" };
+};
+
+export const generateSpeech = async (text, options = {}) => {
   if (!API_KEY) throw new Error("SARVAM_API_KEY missing");
   if (!text || typeof text !== "string") {
     throw new Error("Invalid text input");
   }
+
+  const tone = String(options?.tone || "calm");
+  const speechRate = resolveSpeechRate(tone);
+  const languageInfo = resolveLanguageConfig(options?.language || "en");
 
   const response = await fetch(TTS_URL, {
     method: "POST",
@@ -17,10 +40,11 @@ export const generateSpeech = async (text) => {
     },
     body: JSON.stringify({
       text: text,              
-      voice: "anushka",
-      language: "en-IN",
+      voice: languageInfo.voice,
+      language: languageInfo.language,
       output_format: "wav",
       sample_rate: 16000,
+      speech_rate: speechRate,
     }),
   });
 

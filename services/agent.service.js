@@ -5,7 +5,15 @@ import Tenant from "../models/tenant.model.js";
 import generateAgentPrompt from "./prompt.service.js";
 
 const createAgent = async (data) => {
-  const { tenantId, name, type, tone, script, faqs = [] } = data;
+  const {
+    tenantId,
+    name,
+    type,
+    tone,
+    script,
+    faqs = [],
+    callConfig = {},
+  } = data;
 
   // 1. Basic validation
   if (!tenantId || !name || !type) {
@@ -36,7 +44,7 @@ const createAgent = async (data) => {
 
   // 4. Generate prompt (IMPORTANT)
   const prompt = generateAgentPrompt(
-    { name, type, tone, script, faqs },
+    { name, type, tone, script, faqs, callConfig },
     tenant,
   );
 
@@ -48,6 +56,7 @@ const createAgent = async (data) => {
     tone,
     script,
     faqs,
+    callConfig,
     prompt,
   });
 

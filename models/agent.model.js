@@ -20,6 +20,55 @@ const faqSchema = new Schema(
     { _id: false },
 );
 
+const callConfigSchema = new Schema(
+    {
+        objective: {
+            type: String,
+            enum: [
+                "lead_generation",
+                "appointment_booking",
+                "qualification",
+                "support_inquiry",
+                "custom",
+            ],
+            default: "custom",
+        },
+        reasonForCalling: {
+            type: String,
+            trim: true,
+            maxlength: 300,
+        },
+        primaryGoal: {
+            type: String,
+            trim: true,
+            maxlength: 300,
+        },
+        openingScript: {
+            type: String,
+            trim: true,
+            maxlength: 400,
+        },
+        qualificationFields: {
+            type: [String],
+            default: [],
+        },
+        allowHandoff: {
+            type: Boolean,
+            default: false,
+        },
+        allowAppointmentBooking: {
+            type: Boolean,
+            default: false,
+        },
+        businessContext: {
+            type: String,
+            trim: true,
+            maxlength: 1000,
+        },
+    },
+    { _id: false },
+);
+
 const AgentSchema = new Schema(
     {
         tenantId: {
@@ -51,6 +100,10 @@ const AgentSchema = new Schema(
         faqs: {
             type: [faqSchema],
             default: [],
+        },
+        callConfig: {
+            type: callConfigSchema,
+            default: {},
         },
         prompt: {
             type: String,

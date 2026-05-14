@@ -4,7 +4,7 @@ import { getAgentConfig } from "../config/agents.js";
  * Generate structured AI prompt for agent
  */
 const generateAgentPrompt = (agent, tenant) => {
-  const { name, type, tone, script, faqs = [] } = agent;
+  const { name, type, tone, script, faqs = [], callConfig = {} } = agent;
 
   const agentConfig = getAgentConfig(type);
 
@@ -54,6 +54,41 @@ ${agentConfig.goals.goal}
 \nCustom Instructions:
 ${script}
 `;
+  }
+
+  if (callConfig && Object.keys(callConfig).length > 0) {
+    const qualificationFields = Array.isArray(callConfig.qualificationFields)
+      ? callConfig.qualificationFields.filter(Boolean)
+      : [];
+
+    prompt += `\n\nCall Behavior Configuration:`;
+
+    if (callConfig.objective) {
+      prompt += `\n- Call objective: ${callConfig.objective}`;
+    }
+
+    if (callConfig.reasonForCalling) {
+      prompt += `\n- Reason for calling: ${callConfig.reasonForCalling}`;
+    }
+
+    if (callConfig.primaryGoal) {
+      prompt += `\n- Primary goal: ${callConfig.primaryGoal}`;
+    }
+
+    if (callConfig.openingScript) {
+      prompt += `\n- Opening script: ${callConfig.openingScript}`;
+    }
+
+    if (qualificationFields.length > 0) {
+      prompt += `\n- Qualification fields: ${qualificationFields.join(", ")}`;
+    }
+
+    prompt += `\n- Appointment booking enabled: ${callConfig.allowAppointmentBooking ? "yes" : "no"}`;
+    prompt += `\n- Human handoff enabled: ${callConfig.allowHandoff ? "yes" : "no"}`;
+
+    if (callConfig.businessContext) {
+      prompt += `\n- Business context: ${callConfig.businessContext}`;
+    }
   }
 
   // --- FAQs ---

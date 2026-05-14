@@ -163,6 +163,8 @@ export const createSipCallSession = async (req, res) => {
       callerNumber,
       receiverNumber,
       sessionId,
+      callObjective = "",
+      callConfig = {},
     } = req.body;
 
     // Validate required fields
@@ -188,7 +190,16 @@ export const createSipCallSession = async (req, res) => {
     const roomName = resolveTargetRoomName(generatedRoomName);
 
     // Create SIP session
-    const session = createSipSession(roomName, tenantId, agentId, receiverNumber);
+    const session = createSipSession(
+      roomName,
+      tenantId,
+      agentId,
+      receiverNumber,
+      {
+        ...(callConfig && typeof callConfig === "object" ? callConfig : {}),
+        objective: callObjective || callConfig?.objective || "",
+      },
+    );
 
     console.log("[sip-api] session created", {
       sessionId: finalSessionId,
@@ -209,6 +220,8 @@ export const createSipCallSession = async (req, res) => {
         agentId,
         callerNumber,
         receiverNumber,
+        callObjective: callObjective || callConfig?.objective || session.callConfig?.objective || "",
+        callConfig: session.callConfig || null,
         status: "ready",
         createdAt: session.createdAt,
         message: "Session created successfully. Use this sessionId for next API calls.",
@@ -234,6 +247,8 @@ export const startSipCall = async (req, res) => {
       sessionId,
       autoJoinCaller,
       triggerOutboundCall: shouldTriggerOutbound,
+      callObjective = "",
+      callConfig = {},
     } = req.body;
 
     // Validate required fields
@@ -264,16 +279,28 @@ export const startSipCall = async (req, res) => {
       callerNumber,
       receiverNumber,
       triggerOutbound: shouldTriggerOutbound,
+      callObjective: callObjective || callConfig?.objective || "",
     });
 
     // Step 2: Create SIP session
-    const session = createSipSession(roomName, tenantId, agentId, receiverNumber);
+    const session = createSipSession(
+      roomName,
+      tenantId,
+      agentId,
+      receiverNumber,
+      {
+        ...(callConfig && typeof callConfig === "object" ? callConfig : {}),
+        objective: callObjective || callConfig?.objective || "",
+      },
+    );
 
     // Step 3: Start worker
     try {
       startWorkerForRoom(roomName, {
         tenantId,
         agentId,
+        callObjective: callObjective || callConfig?.objective || "",
+        callConfig: callConfig && typeof callConfig === "object" ? callConfig : null,
       });
       console.log("[sip-call] worker started for room:", roomName);
     } catch (workerErr) {
@@ -484,6 +511,8 @@ export const startSipCall = async (req, res) => {
         receiverNumber,
         status: "active",
         createdAt: session.createdAt,
+        callObjective: callObjective || callConfig?.objective || session.callConfig?.objective || "",
+        callConfig: session.callConfig || null,
         worker: {
           status: "started",
           roomName,

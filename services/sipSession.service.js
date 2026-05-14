@@ -5,12 +5,16 @@ const normalizeRoom = (value) => {
   return String(value).trim();
 };
 
-export const createSipSession = (roomName, tenantId, agentId, did) => {
+export const createSipSession = (roomName, tenantId, agentId, did, callConfig = null) => {
   const room = normalizeRoom(roomName);
   if (!room) throw new Error("roomName is required");
 
   if (sessions.has(room)) {
-    return sessions.get(room);
+    const existing = sessions.get(room);
+    if (callConfig && typeof callConfig === "object") {
+      existing.callConfig = { ...(existing.callConfig || {}), ...callConfig };
+    }
+    return existing;
   }
 
   const session = {
@@ -19,6 +23,7 @@ export const createSipSession = (roomName, tenantId, agentId, did) => {
     agentId,
     did,
     dispatchRuleId: null,
+    callConfig: callConfig && typeof callConfig === "object" ? callConfig : null,
     createdAt: new Date().toISOString(),
   };
 

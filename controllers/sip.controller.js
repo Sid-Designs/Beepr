@@ -256,7 +256,9 @@ export const handleLiveKitSipWebhook = async (req, res) => {
 
     // ===== STEP 6: Handle participant_joined event =====
     if (eventType === "participant_joined") {
-      if (activeRooms.has(roomName) || getSipSession(roomName)) {
+      const existingSession = getSipSession(roomName);
+
+      if (activeRooms.has(roomName) || existingSession) {
         debugSip("[sip] worker already started", {
           roomName,
           participantSid,
@@ -281,7 +283,6 @@ export const handleLiveKitSipWebhook = async (req, res) => {
       if (!tenantId || !agentId) {
         const sessionId = event.sessionId || participant.sessionId;
         if (sessionId) {
-          const existingSession = getSipSession(roomName);
           if (existingSession) {
             tenantId = existingSession.tenantId;
             agentId = existingSession.agentId;
@@ -302,6 +303,11 @@ export const handleLiveKitSipWebhook = async (req, res) => {
         agentId = mapped.agentId;
       }
 
+      if ((!tenantId || !agentId) && existingSession) {
+        tenantId = tenantId || existingSession.tenantId;
+        agentId = agentId || existingSession.agentId;
+      }
+
       if (!tenantId || !agentId) {
         console.warn("[sip] no tenant mapping", { roomName, to: toNorm, participantData: participant });
         return res.status(200).send("OK");
@@ -316,8 +322,20 @@ export const handleLiveKitSipWebhook = async (req, res) => {
         participantSid,
       });
 
-      createSipSession(roomName, tenantId, agentId, toNorm);
-      startWorkerForRoom(roomName, { tenantId, agentId });
+      const session = createSipSession(
+        roomName,
+        tenantId,
+        agentId,
+        toNorm,
+        existingSession?.callConfig || null,
+      );
+
+      startWorkerForRoom(roomName, {
+        tenantId,
+        agentId,
+        callObjective: session?.callConfig?.objective || "",
+        callConfig: session?.callConfig || null,
+      });
 
       console.log("[sip] worker started", {
         roomName,

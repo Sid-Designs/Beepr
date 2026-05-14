@@ -3,13 +3,37 @@ import path from "node:path";
 
 const workers = new Map();
 
-const buildWorkerArgs = (session) => {
-  return [
+const buildWorkerMetadata = ({ roomName, callObjective, callConfig } = {}) => {
+  const metadata = {
+    roomName: roomName || "",
+    callObjective: callObjective || "",
+    callConfig:
+      callConfig && typeof callConfig === "object"
+        ? callConfig
+        : null,
+  };
+
+  const hasMetadata = Boolean(
+    metadata.callObjective ||
+      (metadata.callConfig && Object.keys(metadata.callConfig).length > 0),
+  );
+
+  return hasMetadata ? metadata : null;
+};
+
+const buildWorkerArgs = ({ roomName, tenantId, agentId, workerMetadata }) => {
+  const args = [
     path.resolve("worker.js"),
-    session.roomName,
-    session.tenantId,
-    session.agentId,
+    roomName,
+    tenantId,
+    agentId,
   ];
+
+  if (workerMetadata) {
+    args.push(JSON.stringify(workerMetadata));
+  }
+
+  return args;
 };
 
 const registerWorker = (key, child) => {
@@ -29,17 +53,26 @@ export const startWorkerForCall = (session) => {
     return workers.get(session.callId);
   }
 
-  const args = buildWorkerArgs(session);
-  const child = spawn(process.execPath, args, {
-    stdio: "inherit",
+  const args = buildWorkerArgs({
+    roomName: session.roomName,
+    tenantId: session.tenantId,
+    agentId: session.agentId,
+    workerMetadata: session.workerMetadata || null,
   });
 
+  const child = spawn(process.execPath, args, { stdio: "inherit" });
   registerWorker(session.callId, child);
-
   return child;
 };
 
-export const startWorkerForRoom = (roomName, { tenantId, agentId }) => {
+export const startWorkerForRoom = (roomName, options = {}) => {
+  const {
+    tenantId,
+    agentId,
+    callObjective = "",
+    callConfig = null,
+  } = options;
+
   if (!roomName || !tenantId || !agentId) {
     throw new Error("roomName, tenantId, and agentId are required");
   }
@@ -48,11 +81,20 @@ export const startWorkerForRoom = (roomName, { tenantId, agentId }) => {
     return workers.get(roomName);
   }
 
-  const args = buildWorkerArgs({ roomName, tenantId, agentId });
-  const child = spawn(process.execPath, args, {
-    stdio: "inherit",
+  const workerMetadata = buildWorkerMetadata({
+    roomName,
+    callObjective,
+    callConfig,
   });
 
+  const args = buildWorkerArgs({
+    roomName,
+    tenantId,
+    agentId,
+    workerMetadata,
+  });
+
+  const child = spawn(process.execPath, args, { stdio: "inherit" });
   registerWorker(roomName, child);
   return child;
 };
